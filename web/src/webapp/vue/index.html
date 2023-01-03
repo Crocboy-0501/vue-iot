@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <div id="app">
+        <form>
+            产品类别:<input type="text" v-model="device.name"><br>
+            产品号:<input type="text" v-model="device.deviceId"><br>
+            产品密:<input type="text" v-model="device.secret">
+        </form>
+        <button @click="reg">生成密钥对</button>
+        <br><br>
+        <table border="1" width="100%">
+            <tr>
+                <th>编号</th>
+                <th>温度</th>
+                <th>湿度</th>
+                <th>光照</th>
+                <th>风速</th>
+            </tr>
+            <tr v-for="data in datas">
+                <th>{{data.id}}</th>
+                <th>{{data.temp}}</th>
+                <th>{{data.hum}}</th>
+                <th>{{data.lux}}</th>
+                <th>{{data.wind}}</th>
+            </tr>
+
+        </table>
+    </div>
+</body>
+</html>
+
+<script src="js/vue.js"></script>
+<script>
+    new Vue({
+        el:"#app",
+        data:{
+            msg:"blue",
+            isShow:true,
+            datas:[
+                {id:"1",temp:77,hum:23,lux:140,wind:7},
+                {id:"2",temp:75,hum:23,lux:140,wind:7},
+            ],
+            device:{}
+        },
+        methods:{
+            test(){
+                this.isShow = !this.isShow;
+            },
+            reg(){
+                console.log(this.device.name);
+            }
+        }
+    });
+</script>
