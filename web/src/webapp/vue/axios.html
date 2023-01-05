@@ -8,15 +8,57 @@
     <div id="app">
         <h1>{{msg}}</h1>
         <form action="">
-            编号：<input type="text"> <br>
-            产品类：<input type="text"> <br>
-            <input type="button" value="保存|修改">
-        </form><br><br><br>
+            通信协议: <input type="text" value="MQTT"> <br>
+            产品类型: <input type="text" v-model="dev.product_name"> <br>
+            <input type="button" value="生成证书" @click="generateCert()"> <br><br>
+            device_name: <input type="text" readonly v-model="dev.device_name"> <br>
+            clientID: <input type="text" readonly v-model="dev.broker_username"> <br>
+            secret: <input type="text" readonly v-model="dev.secret">
+        </form>
+        <input type="button" value="定位"><br>
+        <form action="">
+            产品类型: <input type="text" readonly v-model="dev.product_name"> &nbsp;&nbsp;
+            设备名称: <input type="text" readonly v-model="dev.device_name"> &nbsp;&nbsp;
+            命令名称: <input type="text" list="cmdlist" v-model="cmd.commandName"> &nbsp;&nbsp;
+                    <datalist id="cmdlist">
+                        <option>reboot</option>
+                    </datalist>
+            指令参数: <input type="text" v-model="cmd.payLoad"> &nbsp;&nbsp;
+            <input type="button" value="命令下发" @click="sendCmd()">
+        </form><br>
+        <form action="">
+            湿度: <input type="text" readonly> &nbsp;&nbsp;
+            光照: <input type="text" readonly> &nbsp;&nbsp;
+            湿度: <input type="text" readonly> &nbsp;&nbsp;
+            电压: <input type="text" readonly> &nbsp;&nbsp;
+            <input type="button" value="主动采集" @click="generateCert()">
+        </form>
+        <br><br>
+        <input type="button" value="数据导出">
+        <table width="100%" border="1">
+            <tr>
+                <th>编号</th>
+                <th>湿度</th>
+                <th>光照</th>
+                <th>温度</th>
+                <th>电压</th>
+                <th>更新时间</th>
+            </tr>
+            <tr v-for="data,index in datas" style="text-align: center;" :key="index">
+                <td>{{index+1}}</td>
+                <td>{{data.fields.hum}}</td>
+                <td>{{data.fields.lux}}</td>
+                <td>{{data.fields.temp}}</td>
+                <td>{{data.fields.voltage}}</td>
+                <td>{{data.time}}</td>
+            </tr>
+        </table>
+        <br><br><br>
         <input type="button" value="设备添加">
         <table width="100%" border="1">
             <tr>
                 <th>编号</th>
-                <th>产品类</th>
+                <th>产品类型</th>
                 <th>设备名称</th>
                 <th>注册时间</th>
                 <th>操作</th>
@@ -25,28 +67,93 @@
                 <td>{{index+1}}</td>
                 <td>{{dev.product_name}}</td>
                 <td>{{dev.device_name}}</td>
-                <td>202301031027</td>
-                <td><a href="">删除</a>&nbsp;&nbsp;&nbsp<a href="">修改</a></td>
+                <td>{{dev.devRegTime}}</td>
+                <td><a href="javascript:;" @click="delRow(dev.device_name)">删除</a>&nbsp;&nbsp;
+                    <a href="javascript:;" @click="detailRow(dev.device_name)">编辑</a>&nbsp;&nbsp;
+                    <a href="javascript:;" @click="getDevData(dev.device_name)">历史数据</a>
+                </td>
             </tr>
         </table>
+
     </div>
 </body>
 </html>
 <script src="js/vue.js"></script>
-<script src="js/axios.min.js.js"></script>
+<script src="js/axios.min.js"></script>
 <script>
     var app = new Vue({
         el:"#app",
         data:{
             msg:"设备管理",
             devs:[],
-            dev:{}
+            dev:{},
+            datas:[],
+            data:{},
+            tableheader:{},
+            cmd:{}
         },
-        methods:{},
+        methods:{
+            delRow(id){
+                var _this = this;
+                axios.delete("http://localhost:8080/api/devs/" + id).then(function(res){
+                    _this.findAll();
+                }).catch(function(err){
+                    alert('删除员工出现错误请稍后再试');
+                })
+            },
+            findAll(){
+                var _this = this;
+                axios.get("http://localhost:8080/api/devs").then(function (res){
+                    _this.devs = res.data;
+                }).catch(function (err){
+                    alert("查询设备列表出错");
+                });
+            },
+            generateCert(){
+                if(!this.dev.product_name){alert('请输入产品类型');return fals;};
+                var _this = this;
+                axios.post("http://localhost:8080/api/apply", this.dev).then(function (res){
+                    _this.dev = res.data;
+                    _this.findAll();
+                }).catch(function (err){
+                    alert('设备证书生成失败');
+                });
+            },
+            detailRow(device_name){
+                var _this = this;
+                axios.get("http://localhost:8080/api/devsDetail/" + device_name).then(function(res){
+                    console.log(res.data[0]);
+                    _this.dev = res.data[0];
+                    console.log(_this.dev); 
+                }).catch(function(err){
+                    alert('设备详情获取失败');
+                })
+            },
+            getDevData(device_name){
+                var _this = this;
+                axios.get("http://localhost:8080/api/influxData/" + device_name).then(function(res){
+                    console.log(res.data);
+                    _this.datas = res.data;
+                    console.log(_this.datas); 
+                }).catch(function(err){
+                    alert('历史数据获取失败');
+                })
+            },
+            sendCmd(){
+                this.cmd.deviceName = this.dev.device_name;
+                this.cmd.productName = this.dev.product_name;
+                var _this = this;
+                axios.post("http://localhost:8080/api/cmd", this.cmd).then(function (res){
+                    console.log(res);
+                }).catch(function (err){
+                    alert('指令下发失败');
+                });
+            }
+        },
         computed:{},
         created(){
             var _this = this;
-            axios.get().then(function (res){
+            axios.get("http://localhost:8080/api/devs").then(function (res){
                 _this.devs = res.data;
             }).catch(function (err){
                 alert("查询设备列表出错");
